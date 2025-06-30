@@ -1,23 +1,29 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Volume2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-interface VoiceControllerProps {
+// Add type declarations for Speech APIs
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+interface UseVoiceControllerProps {
   onSpeechRecognized: (text: string) => void;
   onListeningChange: (isListening: boolean) => void;
   onSpeakingChange: (isSpeaking: boolean) => void;
 }
 
-const VoiceController: React.FC<VoiceControllerProps> = ({
+export const useVoiceController = ({
   onSpeechRecognized,
   onListeningChange,
   onSpeakingChange
-}) => {
+}: UseVoiceControllerProps) => {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,7 +48,7 @@ const VoiceController: React.FC<VoiceControllerProps> = ({
         onListeningChange(false);
       };
 
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: any) => {
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript;
         
@@ -51,7 +57,7 @@ const VoiceController: React.FC<VoiceControllerProps> = ({
         }
       };
 
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         toast({
           title: "Speech Recognition Error",
@@ -93,9 +99,9 @@ const VoiceController: React.FC<VoiceControllerProps> = ({
       window.speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1.1;
-      utterance.volume = 0.8;
+      utterance.rate = 1.1;
+      utterance.pitch = 1.2;
+      utterance.volume = 0.9;
 
       utterance.onstart = () => {
         onSpeakingChange(true);
@@ -126,5 +132,3 @@ const VoiceController: React.FC<VoiceControllerProps> = ({
 
   return { isListening, isSupported, toggleListening, speak };
 };
-
-export default VoiceController;
