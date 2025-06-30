@@ -22,6 +22,7 @@ export const useVoiceController = ({
   onSpeakingChange
 }: UseVoiceControllerProps) => {
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
@@ -104,14 +105,17 @@ export const useVoiceController = ({
       utterance.volume = 0.9;
 
       utterance.onstart = () => {
+        setIsSpeaking(true);
         onSpeakingChange(true);
       };
 
       utterance.onend = () => {
+        setIsSpeaking(false);
         onSpeakingChange(false);
       };
 
       utterance.onerror = () => {
+        setIsSpeaking(false);
         onSpeakingChange(false);
         toast({
           title: "Speech Error",
@@ -130,5 +134,5 @@ export const useVoiceController = ({
     }
   };
 
-  return { isListening, isSupported, toggleListening, speak };
+  return { isListening, isSpeaking, isSupported, toggleListening, speak };
 };

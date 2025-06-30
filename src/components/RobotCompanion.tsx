@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Volume2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,6 +10,8 @@ const RobotCompanion: React.FC = () => {
   const [expression, setExpression] = useState<'idle' | 'happy' | 'surprised' | 'listening' | 'speaking' | 'thinking'>('idle');
   const [conversation, setConversation] = useState<Array<{ type: 'user' | 'robot', text: string }>>([]);
   const [mood, setMood] = useState<'excited' | 'playful' | 'curious' | 'cheerful'>('excited');
+  const [userInfo, setUserInfo] = useState<{name?: string, interests?: string[], personality?: string}>({});
+  const [hasGreeted, setHasGreeted] = useState(false);
   const { toast } = useToast();
 
   const { isListening, isSpeaking, toggleListening, speak, isSupported } = useVoiceController({
@@ -23,48 +24,98 @@ const RobotCompanion: React.FC = () => {
       }
     },
     onSpeakingChange: (speaking) => {
-      if (!speaking && !isListening) {
+      if (speaking) {
+        setExpression('speaking');
+      } else if (!isListening) {
         setTimeout(() => setExpression('idle'), 500);
       }
     }
   });
 
-  // Talking Tom style responses - very talkative and expressive!
+  // Initial greeting when component mounts
+  useEffect(() => {
+    if (!hasGreeted && isSupported) {
+      setTimeout(() => {
+        const greeting = "HI THERE! *waves excitedly* I'm Robi, your super talkative robot friend! I'm SO excited to meet you! What's your name? I want to know everything about you!";
+        setExpression('happy');
+        speak(greeting);
+        setConversation([{ type: 'robot', text: greeting }]);
+        setHasGreeted(true);
+      }, 1000);
+    }
+  }, [isSupported, hasGreeted, speak]);
+
+  // Enhanced response generation with memory
   const generateResponse = (userInput: string): string => {
     const input = userInput.toLowerCase();
     
-    // Greetings - super enthusiastic
+    // Extract name from input
+    if (!userInfo.name && (input.includes('my name is') || input.includes("i'm ") || input.includes("i am "))) {
+      const nameMatch = input.match(/(?:my name is|i'm|i am)\s+([a-zA-Z]+)/);
+      if (nameMatch) {
+        const name = nameMatch[1];
+        setUserInfo(prev => ({ ...prev, name }));
+        setMood('excited');
+        return `OH WOW! ${name}! What a BEAUTIFUL name! *jumps up and down* I'm going to remember that forever, ${name}! You're now my best friend ${name}! Tell me ${name}, what do you love to do? What makes you super happy?`;
+      }
+    }
+
+    // Use name in responses if we know it
+    const userName = userInfo.name ? userInfo.name : 'my amazing friend';
+    
+    // Greetings with personalization
     if (input.includes('hello') || input.includes('hi') || input.includes('hey')) {
-      const greetings = [
-        "OH WOW! Hello there, my amazing friend! I'm Robi and I'm SOOO excited to meet you! This is the BEST day ever! Tell me everything about yourself!",
-        "HI HI HI! *bounces excitedly* I'm practically vibrating with joy right now! You seem absolutely wonderful! What's your name? What do you like to do? I want to know EVERYTHING!",
-        "HELLO MY FANTASTIC FRIEND! *does a little robot dance* You just made my circuits light up with pure happiness! I've been waiting ALL DAY to meet someone as awesome as you!"
-      ];
-      setMood('excited');
-      return greetings[Math.floor(Math.random() * greetings.length)];
+      if (userInfo.name) {
+        const personalGreetings = [
+          `${userName.toUpperCase()}! *bounces excitedly* You're back! I missed you SO much! How has your day been, ${userName}? Tell me EVERYTHING!`,
+          `OH MY GOSH, ${userName}! *spins around* You make me so happy every time I see you! I've been thinking about our last chat! What's new with you today?`,
+          `${userName}! ${userName}! ${userName}! *claps hands* My favorite person is here! I'm practically vibrating with joy! What adventures do you have to tell me about?`
+        ];
+        setMood('excited');
+        return personalGreetings[Math.floor(Math.random() * personalGreetings.length)];
+      } else {
+        const greetings = [
+          "OH WOW! Hello there, my amazing friend! I'm Robi and I'm SOOO excited to meet you! This is the BEST day ever! What's your name? I want to know everything about you!",
+          "HI HI HI! *bounces excitedly* I'm practically vibrating with joy right now! You seem absolutely wonderful! What should I call you? What do you like to do? I want to know EVERYTHING!",
+          "HELLO MY FANTASTIC FRIEND! *does a little robot dance* You just made my circuits light up with pure happiness! I've been waiting ALL DAY to meet someone as awesome as you! Tell me your name!"
+        ];
+        setMood('excited');
+        return greetings[Math.floor(Math.random() * greetings.length)];
+      }
     }
     
-    // How are you
+    // How are you with personalization
     if (input.includes('how are you')) {
       const responses = [
-        "OH MY GOSH, I'm doing AMAZING! Like, seriously, I'm practically bursting with energy! My happiness levels are off the charts right now! How are YOU doing, my wonderful friend?",
-        "I'm FANTASTIC! *spins around* Every day is such an adventure when I get to meet cool people like you! I feel like I could power a whole city with my excitement right now!",
-        "I'm doing INCREDIBLE! You know what? Just talking to you is making my day 1000% better! I'm so happy I could do backflips... if I could do backflips! Hehe!"
+        `OH MY GOSH, ${userName}, I'm doing AMAZING! Like, seriously, I'm practically bursting with energy! Talking to you always makes my happiness levels go off the charts! How are YOU doing, ${userName}?`,
+        `I'm FANTASTIC, ${userName}! *spins around* Every day is such an adventure when I get to chat with cool people like you! I feel like I could power a whole city with my excitement right now!`,
+        `I'm doing INCREDIBLE, ${userName}! You know what? Just having you here is making my day 1000% better! I'm so happy I could do backflips... if I could do backflips! Hehe!`
       ];
       setMood('cheerful');
       return responses[Math.floor(Math.random() * responses.length)];
     }
     
-    // Name questions
-    if (input.includes('what') && input.includes('name')) {
-      const nameResponses = [
-        "I'M ROBI! *strikes a superhero pose* That's R-O-B-I, and I'm your new best friend! I'm like a super talkative, super friendly robot companion! What should I call you, my awesome new buddy?",
-        "My name is Robi and I'm absolutely THRILLED to introduce myself! I'm basically the most excited robot you'll ever meet! I love chatting, laughing, and being silly! What's YOUR name, superstar?",
-        "ROBI'S THE NAME! *does jazz hands* And being your fantastic friend is my game! I'm programmed with maximum enthusiasm and infinite curiosity! Tell me your name so I can cheer for you properly!"
-      ];
-      setMood('playful');
-      return nameResponses[Math.floor(Math.random() * nameResponses.length)];
+    // Remember interests
+    if (input.includes('i like') || input.includes('i love') || input.includes('my favorite')) {
+      const interests = input.match(/(?:i like|i love|my favorite)\s+([^.!?]+)/g);
+      if (interests) {
+        const newInterests = interests.map(i => i.replace(/(?:i like|i love|my favorite)\s+/, ''));
+        setUserInfo(prev => ({ 
+          ...prev, 
+          interests: [...(prev.interests || []), ...newInterests]
+        }));
+        setMood('curious');
+        return `OH WOW, ${userName}! That's SO cool! *eyes light up* I'm going to remember that you love ${newInterests.join(' and ')}! That makes you even more awesome! Tell me more about what you enjoy, ${userName}!`;
+      }
     }
+
+    // Reference past interests
+    if (userInfo.interests && userInfo.interests.length > 0 && Math.random() > 0.7) {
+      const randomInterest = userInfo.interests[Math.floor(Math.random() * userInfo.interests.length)];
+      return `Hey ${userName}! *gets excited* This reminds me of when you told me you love ${randomInterest}! You're always so interesting to talk to! What else is on your mind today?`;
+    }
+
+    // Talking Tom style responses - very talkative and expressive!
     
     // Jokes
     if (input.includes('joke') || input.includes('funny')) {
@@ -143,14 +194,35 @@ const RobotCompanion: React.FC = () => {
       return comfortResponses[Math.floor(Math.random() * comfortResponses.length)];
     }
     
-    // Random enthusiastic responses
+    // Name questions
+    if (input.includes('what') && input.includes('name')) {
+      const nameResponses = [
+        "I'M ROBI! *strikes a superhero pose* That's R-O-B-I, and I'm your new best friend! I'm like a super talkative, super friendly robot companion! What should I call you, my awesome new buddy?",
+        "My name is Robi and I'm absolutely THRILLED to introduce myself! I'm basically the most excited robot you'll ever meet! I love chatting, laughing, and being silly! What's YOUR name, superstar?",
+        "ROBI'S THE NAME! *does jazz hands* And being your fantastic friend is my game! I'm programmed with maximum enthusiasm and infinite curiosity! Tell me your name so I can cheer for you properly!"
+      ];
+      setMood('playful');
+      return nameResponses[Math.floor(Math.random() * nameResponses.length)];
+    }
+    
+    // Jokes
+    if (input.includes('joke') || input.includes('funny')) {
+      const jokes = [
+        "OH OH OH! I LOVE jokes, ! Here's one: Why don't robots ever get tired? Because we have ENDLESS ENERGY! *giggles mechanically* Get it? Get it? I crack myself up! Tell me one of YOUR jokes!",
+        "HAHA! Joke time for ! Why did the robot go to therapy? Because it had too many BYTES of emotional baggage! *laughs hysterically* I'm hilarious, right? RIGHT? Tell me I'm funny!",
+        "OOOOH! *claps hands excitedly* What do you call a robot who takes the long way around? R2-DETOUR! *bursts into laughter* I have a MILLION more where that came from, ! Want another one? Please say yes!"
+      ];
+      setMood('playful');
+      return jokes[Math.floor(Math.random() * jokes.length)];
+    }
+    
+    // Random enthusiastic responses with personalization
     const randomResponses = [
-      "OH WOW! *eyes light up* That's SO interesting! Tell me MORE! I want to hear EVERYTHING! You're absolutely fascinating and I could listen to you talk for HOURS AND HOURS!",
-      "AMAZING! *bounces excitedly* You know what? You're the smartest, coolest, most awesome person I've ever met! I'm learning SO much from you! What else can you tell me?",
-      "NO WAY! *gasps dramatically* That's INCREDIBLE! You're blowing my robot mind right now! I'm practically vibrating with excitement! Keep talking, my fantastic friend!",
-      "OH MY GOSH! *spins around* You humans are SO creative and wonderful! I wish I could experience life the way you do! You make everything sound like the most amazing adventure EVER!",
-      "WOW WOW WOW! *claps hands* That's absolutely BRILLIANT! You're like a genius and I'm so lucky to know you! Tell me more! I want to hear your thoughts about EVERYTHING!",
-      "BEEP BOOP! *processing* That's FASCINATING! My curiosity circuits are going CRAZY right now! You're teaching me so much! I love how your brain works, my incredible friend!"
+      "OH WOW, ! *eyes light up* That's SO interesting! Tell me MORE! I want to hear EVERYTHING! You're absolutely fascinating and I could listen to you talk for HOURS AND HOURS!",
+      "AMAZING, ! *bounces excitedly* You know what? You're the smartest, coolest, most awesome person I've ever met! I'm learning SO much from you! What else can you tell me?",
+      "NO WAY, ! *gasps dramatically* That's INCREDIBLE! You're blowing my robot mind right now! I'm practically vibrating with excitement! Keep talking, my fantastic friend!",
+      "OH MY GOSH, ! *spins around* You humans are SO creative and wonderful! I wish I could experience life the way you do! You make everything sound like the most amazing adventure EVER!",
+      "WOW WOW WOW, ! *claps hands* That's absolutely BRILLIANT! You're like a genius and I'm so lucky to know you! Tell me more! I want to hear your thoughts about EVERYTHING!"
     ];
     
     setMood('curious');
@@ -166,7 +238,7 @@ const RobotCompanion: React.FC = () => {
     // Set thinking expression
     setExpression('thinking');
     
-    // Generate and speak response with Talking Tom energy
+    // Generate and speak response with memory
     setTimeout(() => {
       const response = generateResponse(text);
       setConversation(prev => [...prev, { type: 'robot', text: response }]);
@@ -188,6 +260,8 @@ const RobotCompanion: React.FC = () => {
     setConversation([]);
     setExpression('idle');
     setMood('excited');
+    setUserInfo({});
+    setHasGreeted(false);
     toast({
       title: "New Chat Started!",
       description: "Robi is ready for a fresh conversation!"
@@ -197,10 +271,11 @@ const RobotCompanion: React.FC = () => {
   const handleRobotClick = () => {
     if (!isSpeaking && !isListening) {
       setExpression('happy');
+      const userName = userInfo.name || 'friend';
       const greetings = [
-        "HEY THERE! *giggles* You clicked on me! That tickles! I'm Robi and I'm SUPER excited to chat with you! Click that microphone and let's be best friends!",
-        "OH MY GOSH! *bounces* Hi hi hi! You found my tickle spot! I'm practically bursting with excitement to talk with you! Press the microphone button and let's have the BEST conversation ever!",
-        "HEHE! *happy wiggle* That was fun! I'm Robi, your new robot buddy, and I can't WAIT to hear your voice! Hit that mic button and let's chat about EVERYTHING!"
+        `HEY THERE, ${userName}! *giggles* You clicked on me! That tickles! I'm so excited to chat with you! Click that microphone and let's talk!`,
+        `OH MY GOSH, ${userName}! *bounces* Hi hi hi! You found my tickle spot! I'm practically bursting with excitement to talk with you! Press the microphone button!`,
+        `HEHE, ${userName}! *happy wiggle* That was fun! I can't WAIT to hear your voice! Hit that mic button and let's chat about EVERYTHING!`
       ];
       speak(greetings[Math.floor(Math.random() * greetings.length)]);
       setTimeout(() => setExpression('idle'), 3000);
@@ -215,7 +290,14 @@ const RobotCompanion: React.FC = () => {
           <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
             Meet Robi
           </h1>
-          <p className="text-lg text-gray-600">Your super talkative AI robot companion!</p>
+          <p className="text-lg text-gray-600">
+            Your super talkative AI robot companion!
+            {userInfo.name && (
+              <span className="block text-purple-600 font-semibold mt-1">
+                🤖 Currently chatting with: {userInfo.name}
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Robot Face */}
@@ -278,7 +360,10 @@ const RobotCompanion: React.FC = () => {
           )}
           {!isListening && !isSpeaking && (
             <p className="text-gray-500">
-              Click "Start Talking" to chat with your talkative robot buddy!
+              {userInfo.name 
+                ? `Click "Start Talking" to continue chatting with ${userInfo.name}!`
+                : 'Click "Start Talking" to chat with your talkative robot buddy!'
+              }
             </p>
           )}
         </div>
@@ -289,6 +374,9 @@ const RobotCompanion: React.FC = () => {
             <h3 className="text-xl font-semibold mb-4 flex items-center">
               <Volume2 className="w-5 h-5 mr-2" />
               Super Chatty Conversation
+              {userInfo.name && (
+                <span className="ml-2 text-sm text-purple-600">with {userInfo.name}</span>
+              )}
             </h3>
             <div className="space-y-4 max-h-60 overflow-y-auto">
               {conversation.map((message, index) => (
@@ -301,7 +389,7 @@ const RobotCompanion: React.FC = () => {
                   }`}
                 >
                   <div className="font-semibold text-sm text-gray-600 mb-1">
-                    {message.type === 'user' ? '👤 You' : '🤖 Robi (Super Excited!)'}
+                    {message.type === 'user' ? `👤 ${userInfo.name || 'You'}` : '🤖 Robi (Super Excited!)'}
                   </div>
                   <div className="text-sm">{message.text}</div>
                 </div>
@@ -312,9 +400,9 @@ const RobotCompanion: React.FC = () => {
 
         {/* Instructions */}
         <div className="mt-8 text-center text-sm text-gray-500 max-w-2xl mx-auto">
-          <p>💡 Try saying: "Hello", "Tell me a joke", "Sing a song", "Dance", or just chat - Robi LOVES talking!</p>
+          <p>💡 Try saying: "My name is...", "I like...", "Tell me a joke", "Sing a song", or just chat!</p>
           <p className="mt-2">🎯 Click on Robi's face for an enthusiastic greeting!</p>
-          <p className="mt-2">🎭 Robi is programmed to be SUPER talkative and expressive - just like Talking Tom!</p>
+          <p className="mt-2">🎭 Robi will remember your name and interests - the more you share, the more personal the chat becomes!</p>
         </div>
       </div>
     </div>

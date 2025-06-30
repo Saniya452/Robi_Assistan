@@ -9,7 +9,9 @@ interface RobotFaceProps {
 
 const RobotFace: React.FC<RobotFaceProps> = ({ expression, isAnimating = false }) => {
   const [blinkState, setBlinkState] = useState(false);
+  const [mouthAnimation, setMouthAnimation] = useState(0);
   const blinkTimer = useRef<NodeJS.Timeout>();
+  const mouthTimer = useRef<NodeJS.Timeout>();
 
   // Blinking animation
   useEffect(() => {
@@ -33,6 +35,25 @@ const RobotFace: React.FC<RobotFaceProps> = ({ expression, isAnimating = false }
       }
     };
   }, [expression]);
+
+  // Enhanced mouth animation for speaking
+  useEffect(() => {
+    if (expression === 'speaking' && isAnimating) {
+      const animateMouth = () => {
+        setMouthAnimation(prev => (prev + 1) % 4);
+        mouthTimer.current = setTimeout(animateMouth, 150);
+      };
+      animateMouth();
+    } else {
+      setMouthAnimation(0);
+    }
+
+    return () => {
+      if (mouthTimer.current) {
+        clearTimeout(mouthTimer.current);
+      }
+    };
+  }, [expression, isAnimating]);
 
   const getEyeSize = () => {
     switch (expression) {
@@ -68,7 +89,14 @@ const RobotFace: React.FC<RobotFaceProps> = ({ expression, isAnimating = false }
       case 'surprised':
         return 'w-6 h-8 bg-gray-700 rounded-full';
       case 'speaking':
-        return 'w-12 h-6 bg-gray-700 rounded-full animate-pulse';
+        // Dynamic mouth shapes for speaking animation
+        const shapes = [
+          'w-12 h-6 bg-gray-700 rounded-full',
+          'w-8 h-8 bg-gray-700 rounded-full',
+          'w-14 h-4 bg-gray-700 rounded-full',
+          'w-10 h-6 bg-gray-700 rounded-full'
+        ];
+        return `${shapes[mouthAnimation]} transition-all duration-150`;
       case 'listening':
         return 'w-8 h-2 bg-gray-700 rounded-full';
       case 'thinking':
@@ -96,7 +124,7 @@ const RobotFace: React.FC<RobotFaceProps> = ({ expression, isAnimating = false }
         )}>
           {!blinkState && (
             <div className="w-4 h-4 bg-white rounded-full relative">
-              <div className="absolute top-1 left-1 w-2 h-2 bg-blue-400 rounded-full"></div>
+              <div className="absolute top-1 left-1 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
             </div>
           )}
         </div>
@@ -109,15 +137,20 @@ const RobotFace: React.FC<RobotFaceProps> = ({ expression, isAnimating = false }
         )}>
           {!blinkState && (
             <div className="w-4 h-4 bg-white rounded-full relative">
-              <div className="absolute top-1 left-1 w-2 h-2 bg-blue-400 rounded-full"></div>
+              <div className="absolute top-1 left-1 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mouth */}
+      {/* Enhanced mouth with better animations */}
       <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2">
-        <div className={cn("transition-all duration-300", getMouthShape())}></div>
+        <div className={cn("transition-all duration-300", getMouthShape())}>
+          {/* Add teeth/inner mouth detail for speaking */}
+          {expression === 'speaking' && (
+            <div className="absolute inset-1 bg-pink-200 rounded-full opacity-60"></div>
+          )}
+        </div>
       </div>
 
       {/* Listening indicator */}
@@ -139,6 +172,14 @@ const RobotFace: React.FC<RobotFaceProps> = ({ expression, isAnimating = false }
             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
             <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
           </div>
+        </div>
+      )}
+
+      {/* Heart eyes when very happy */}
+      {expression === 'happy' && (
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 flex space-x-8 pointer-events-none">
+          <div className="w-4 h-4 text-red-500 animate-pulse">❤️</div>
+          <div className="w-4 h-4 text-red-500 animate-pulse" style={{ animationDelay: '0.2s' }}>❤️</div>
         </div>
       )}
     </div>
