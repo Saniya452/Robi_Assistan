@@ -219,6 +219,14 @@ const RobotCompanion: React.FC = () => {
     setDailyPlan((prev) => ({ ...prev, assistantSuggestions: suggestions, updatedAt: Date.now() }));
   };
 
+  const assistantStatus = isProcessing
+    ? 'Thinking'
+    : isListening
+      ? 'Listening'
+      : isSpeaking
+        ? 'Speaking'
+        : 'Idle';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-purple-100 p-4">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[240px_1fr_320px] gap-4">
@@ -250,6 +258,10 @@ const RobotCompanion: React.FC = () => {
             <div className="cursor-pointer" onClick={handleRobotClick}>
               <RobotFace expression={expression} isAnimating={isSpeaking || isProcessing} />
             </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Status:</span>
+            <span className="font-medium">{assistantStatus}</span>
           </div>
 
           {activeSection === 'chat' && (
